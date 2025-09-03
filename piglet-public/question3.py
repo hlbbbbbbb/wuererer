@@ -4,6 +4,7 @@ from typing import List, Tuple
 import glob, os, sys, time, json
 from collections import deque
 
+
 # import necessary modules that this python scripts need.
 # The evaluation environment used in the assignment ships a module
 # `flatland.utils.controller`.  The open source `flatland-rl` package
@@ -57,6 +58,7 @@ def _manhattan(a: Tuple[int, int], b: Tuple[int, int]) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
+
 def _is_reserved(res_pos, res_edge, from_pos, to_pos, time) -> bool:
     """Check vertex and edge conflicts in the reservation tables."""
     if res_pos.get((to_pos[0], to_pos[1], time)):
@@ -74,6 +76,7 @@ def _reserve_path(res_pos, res_edge, path: List[Tuple[int, int]], start_time: in
         res_pos[(pos[0], pos[1], t)] = True
         if i > 0:
             res_edge[(path[i - 1], pos, t)] = True
+
 
 
 def _search_single(rail: GridTransitionMap, start_pos: Tuple[int, int], start_dir: int,
@@ -99,6 +102,7 @@ def _search_single(rail: GridTransitionMap, start_pos: Tuple[int, int], start_di
                 visited.add(state)
                 q.append((pos, direction, next_time, path + [pos]))
 
+
         # Option 2: move along any valid transition
         valid_transitions = rail.get_transitions(pos[0], pos[1], direction)
         for nd in range(len(valid_transitions)):
@@ -116,15 +120,16 @@ def _search_single(rail: GridTransitionMap, start_pos: Tuple[int, int], start_di
             new_pos = (nx, ny)
             if _is_reserved(res_pos, res_edge, pos, new_pos, next_time):
                 continue
+
             state = (new_pos, nd, next_time)
             if state in visited:
                 continue
             visited.add(state)
             q.append((new_pos, nd, next_time, path + [new_pos]))
 
+
     # No path found – remain in place
     return [start_pos]
-
 
 # This function returns a list of location tuples as the solution.
 # @param env The flatland railway environment
@@ -139,18 +144,21 @@ def get_path(agents: List[EnvAgent], rail: GridTransitionMap, max_timestep: int)
     n_agents = len(agents)
     paths = [None] * n_agents
 
+
     # Prioritise agents with shorter Manhattan distance to goal
     order = sorted(range(n_agents), key=lambda i: _manhattan(agents[i].initial_position, agents[i].target))
 
     for agent_id in order:
         agent = agents[agent_id]
         path = _search_single(
+
             rail,
             agent.initial_position,
             agent.initial_direction,
             agent.target,
             res_pos,
             res_edge,
+
             0,
             max_timestep,
         )
@@ -161,6 +169,7 @@ def get_path(agents: List[EnvAgent], rail: GridTransitionMap, max_timestep: int)
 
         paths[agent_id] = path
         _reserve_path(res_pos, res_edge, path)
+
 
     return paths
 
@@ -188,12 +197,14 @@ def replan(agents: List[EnvAgent],rail: GridTransitionMap,  current_timestep: in
             _reserve_path(res_pos, res_edge, path[current_timestep:], current_timestep)
 
     new_paths = existing_paths[:]
+
     for idx in affected:
         agent = agents[idx]
         if len(existing_paths[idx]) > current_timestep:
             start = existing_paths[idx][current_timestep]
             if current_timestep > 0 and len(existing_paths[idx]) >= 2:
                 prev = existing_paths[idx][current_timestep - 1]
+
                 dx, dy = start[0] - prev[0], start[1] - prev[1]
                 if dx == -1:
                     direction = Directions.NORTH
@@ -207,9 +218,11 @@ def replan(agents: List[EnvAgent],rail: GridTransitionMap,  current_timestep: in
                     direction = agent.initial_direction
             else:
                 direction = agent.initial_direction
+
             prefix = existing_paths[idx][:current_timestep]
         else:
             # agent already finished path; restart from last position
+
             start = existing_paths[idx][-1]
             if len(existing_paths[idx]) >= 2:
                 prev = existing_paths[idx][-2]
@@ -228,23 +241,28 @@ def replan(agents: List[EnvAgent],rail: GridTransitionMap,  current_timestep: in
                 direction = agent.initial_direction
             prefix = existing_paths[idx]
 
+
         replanned = _search_single(
+
             rail,
             start,
             direction,
             agent.target,
             res_pos,
             res_edge,
+
             current_timestep,
             max_timestep,
         )
 
-        # Merge prefix and new plan
+
         full_path = prefix + replanned[1:]
         if len(full_path) < max_timestep:
             full_path = full_path + [full_path[-1]] * (max_timestep - len(full_path))
         new_paths[idx] = full_path
+
         _reserve_path(res_pos, res_edge, full_path[current_timestep:], current_timestep)
+
 
     return new_paths
 
