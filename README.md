@@ -1,3 +1,3 @@
 # wuererer
 需要根据flatland2论文完成q3的代码
-q3的要求以及flantland都在pdf里面，自行查看
+q3的要求以及flantland都在pdf里面，自行查看1
